@@ -1,0 +1,6 @@
+{
+  // Static site: Cloudflare serves everything in ./public
+  "name": "coin-counter",
+  "compatibility_date": "2025-11-01",
+  "assets": { "directory": "./public" }
+}
