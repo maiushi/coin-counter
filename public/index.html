@@ -69,8 +69,8 @@ details .note{margin:6px 0 4px}
   </section>
 
   <div class="tare">
-    <label for="tare">Default container weight</label>
-    <input id="tare" inputmode="decimal" value="0"> <span>g, used for any row whose own Container box is empty</span>
+    <label for="tare">Container weight (all rows)</label>
+    <input id="tare" inputmode="decimal" value="0"> <span>g, typing here sets every row's Container box; you can still change a row after</span>
   </div>
 
   <table class="stack" id="slip">
@@ -88,7 +88,7 @@ details .note{margin:6px 0 4px}
   <details>
     <summary>Instructions</summary>
     <p class="note">Tray 1 → ₱20. Tray 2 → run a magnet over it: coins that stick are new ₱10; of the rest, all-gold coins are old ₱5 and silver-ring coins are old ₱10. Tray 3 → ₱5. Tray 4 → old ₱1. Pan → new ₱1. Old ₱1 coins from 1995–2003 (no magnet pull) weigh 6.1 g; if you have many, weigh them separately.</p>
-    <p class="note">Weighing coins inside their tray? Weigh each empty tray once and type it into that row's Container box; the page remembers it. Rows with an empty Container box use the default at the top (set it to 0 if you press TARE on the scale).</p>
+    <p class="note">Weighing coins inside their tray? Weigh each empty tray once and type it into that row's Container box; the page remembers it. To set all trays at once, type it in Container weight at the top; it fills every row (set it to 0 if you press TARE on the scale).</p>
   </details>
 
   <details>
@@ -172,7 +172,11 @@ function store() {
   save();
 }
 
-document.addEventListener("input", e => { if (e.target.tagName === "INPUT") { calc(); store(); } });
+document.addEventListener("input", e => {
+  if (e.target.tagName !== "INPUT") return;
+  if (e.target === tareEl) COINS.forEach(c => document.getElementById("t-" + c.id).value = tareEl.value);
+  calc(); store();
+});
 
 const msg = t => { const m = document.getElementById("msg"); m.textContent = t; setTimeout(() => { if (m.textContent === t) m.textContent = ""; }, 2500); };
 
