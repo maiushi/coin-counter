@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Coin Count by Weight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a practical shop tool, calm and exact, like a good kitchen scale.
+   IDEA: the weighing slip you fill in at the counter, one line per tray.
+   PICTURE: the live peso total, huge, with a stacked coin-column bar of where it comes from.
+   COLOUR and TYPE: nickel-steel ground, ink, brass accent for gold coins; Archivo 800 for figures.
+   LAYOUT: total + bar first, then the slip rows (grams in, coins and pesos out), then calibration. */
+:root{color-scheme:light dark;--bg:light-dark(#e8ebee,#12171c);--card:light-dark(#ffffff,#1b232a);--ink:light-dark(#14202b,#e9eef2);--mute:light-dark(#5b6873,#9aa7b2);--line:light-dark(#d3d9de,#2b3640);--brass:light-dark(#a8780a,#e0b23c);--steel:light-dark(#7d8b97,#aebbc6);--bronze:light-dark(#b0612b,#e08a4f)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Archivo,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,4vw,48px) max(5vw,16px);max-width:980px;margin:0 auto}
+h1{font-size:clamp(24px,4vw,32px);line-height:1.1;margin:0 0 4px;font-weight:800;text-wrap:balance}
+.sub{color:var(--mute);margin:0 0 18px;font-size:15px}
+.hero{background:var(--card);border-radius:18px;padding:clamp(18px,3vw,28px);box-shadow:0 1px 0 var(--line)}
+.total{font-weight:800;font-size:clamp(48px,11vw,92px);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.total small{font-size:.45em;color:var(--mute);font-weight:600;margin-left:.2em}
+.meta{color:var(--mute);margin-top:6px;font-size:15px}
+.bar{display:flex;height:22px;border-radius:11px;overflow:hidden;margin:18px 0 8px;background:var(--line)}
+.bar span{height:100%;transition:width .3s}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--mute)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.tare{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:22px 0 10px}
+label{font-weight:600}
+input{font:inherit;font-size:16px;width:7.5em;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+input:focus-visible,button:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+th{font-size:13px;color:var(--mute);font-weight:600}
+td.coin b{display:block}td.coin em{font-style:normal;color:var(--mute);font-size:13px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px}
+td input{width:6.5em}
+.num{font-weight:800;font-variant-numeric:tabular-nums}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
+button{font:inherit;font-weight:600;min-height:44px;padding:0 18px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.main{background:var(--brass);border-color:var(--brass);color:#fff}
+.note{font-size:14px;color:var(--mute);max-width:70ch}
+details{background:var(--card);border-radius:14px;padding:14px 16px;margin-top:14px}
+summary{font-weight:600;cursor:pointer;min-height:28px}
+#msg{font-size:14px;color:var(--brass);min-height:20px}
+@media(max-width:600px){table{font-size:14px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:4px 12px;padding-inline-start:8.5em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;color:var(--mute);font-size:13px;white-space:normal}.stack td.coin{padding-inline-start:12px}.stack td.coin::before{display:none}}
+@media(prefers-reduced-motion:reduce){.bar span{transition:none}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<div class="band">
+  <h1>Coin count by weight</h1>
+  <p class="sub">Weigh each tray's coins, type the grams, and get the count and peso total.</p>
+
+  <section class="hero" aria-live="polite">
+    <div class="total" id="total">₱0</div>
+    <div class="meta" id="meta">0 coins · type weights below</div>
+    <div class="bar" id="bar"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <div class="tare">
+    <label for="tare">Container weight</label>
+    <input id="tare" inputmode="decimal" value="0"> <span>g, subtracted from every row</span>
+  </div>
+
+  <table class="stack" id="slip">
+    <thead><tr><th>Coin</th><th>Weighed (g)</th><th>Grams per coin</th><th>Coins</th><th>Value</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <div class="btns">
+    <button class="main" id="copy">Copy summary</button>
+    <button id="clear">Clear weights</button>
+    <button id="reset">Reset coin weights</button>
+  </div>
+  <div id="msg"></div>
+
+  <p class="note">Counts are about ±1%, because worn coins weigh a little less. For a closer count, calibrate: weigh 20 of your own coins of one kind, divide by 20, and type that into "Grams per coin". The page remembers your numbers on this device.</p>
+
+  <details>
+    <summary>Which tray goes in which row?</summary>
+    <p class="note">Tray 1 → ₱20. Tray 2 → run a magnet over it: coins that stick are new ₱10; of the rest, all-gold coins are old ₱5 and silver-ring coins are old ₱10. Tray 3 → ₱5. Tray 4 → old ₱1. Pan → new ₱1. Old ₱1 coins from 1995–2003 (no magnet pull) weigh 6.1 g; if you have many, weigh them separately.</p>
+  </details>
+</div>
+
+<script>
+{
+const COINS = [
+  {id:"p20",  name:"₱20",        note:"Tray 1",                 g:11.5, v:20, c:"var(--bronze)"},
+  {id:"p10n", name:"₱10 new",    note:"Tray 2, sticks to magnet", g:8.0,  v:10, c:"var(--steel)"},
+  {id:"p10o", name:"₱10 old",    note:"Tray 2, silver ring",     g:8.7,  v:10, c:"#8fa3a8"},
+  {id:"p5o",  name:"₱5 old",     note:"Tray 2, all gold",        g:7.7,  v:5,  c:"var(--brass)"},
+  {id:"p5",   name:"₱5",         note:"Tray 3",                  g:7.4,  v:5,  c:"#b9c3cb"},
+  {id:"p1o",  name:"₱1 old",     note:"Tray 4",                  g:5.35, v:1,  c:"#9aa5ae"},
+  {id:"p1n",  name:"₱1 new",     note:"Pan",                     g:6.0,  v:1,  c:"#cfd6dc"}
+];
+const DEFAULT_G = Object.fromEntries(COINS.map(c => [c.id, c.g]));
+const KEY = "coin-count-v1";
+let state = {tare: 0, w: {}, g: {...DEFAULT_G}};
+try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) state = {tare: s.tare || 0, w: s.w || {}, g: {...DEFAULT_G, ...(s.g || {})}}; } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+const peso = n => "₱" + Math.round(n).toLocaleString("en-PH");
+const num = s => { const x = parseFloat(String(s).replace(/,/g, "")); return isFinite(x) ? x : 0; };
+
+const rows = document.getElementById("rows");
+rows.innerHTML = COINS.map(c => `
+  <tr>
+    <td class="coin"><span class="dot" style="background:${c.c}"></span><b style="display:inline">${c.name}</b><em style="display:block;margin-left:20px">${c.note}</em></td>
+    <td><input id="w-${c.id}" inputmode="decimal" placeholder="0" aria-label="${c.name} weighed grams"></td>
+    <td><input id="g-${c.id}" inputmode="decimal" aria-label="${c.name} grams per coin"></td>
+    <td class="num" id="n-${c.id}">0</td>
+    <td class="num" id="v-${c.id}">₱0</td>
+  </tr>`).join("");
+
+const tareEl = document.getElementById("tare");
+tareEl.value = state.tare || 0;
+COINS.forEach(c => {
+  document.getElementById("w-" + c.id).value = state.w[c.id] ?? "";
+  document.getElementById("g-" + c.id).value = state.g[c.id];
+});
+
+function calc() {
+  const tare = num(tareEl.value);
+  let total = 0, coins = 0; const parts = [];
+  COINS.forEach(c => {
+    const raw = document.getElementById("w-" + c.id).value;
+    const w = raw === "" ? 0 : Math.max(0, num(raw) - tare);
+    const g = num(document.getElementById("g-" + c.id).value) || c.g;
+    const n = w > 0 ? Math.round(w / g) : 0;
+    const v = n * c.v;
+    document.getElementById("n-" + c.id).textContent = n.toLocaleString("en-PH");
+    document.getElementById("v-" + c.id).textContent = peso(v);
+    total += v; coins += n; parts.push({c, n, v});
+  });
+  document.getElementById("total").innerHTML = peso(total);
+  document.getElementById("meta").textContent = coins
+    ? `${coins.toLocaleString("en-PH")} coins · about ${peso(total * 0.99)}–${peso(total * 1.01)}`
+    : "0 coins · type weights below";
+  const used = parts.filter(p => p.v > 0);
+  document.getElementById("bar").innerHTML = used.map(p => `<span title="${p.c.name}" style="width:${(p.v / total * 100).toFixed(2)}%;background:${p.c.c}"></span>`).join("");
+  document.getElementById("legend").innerHTML = used.map(p => `<span><i style="background:${p.c.c}"></i>${p.c.name} ${peso(p.v)}</span>`).join("");
+  return {parts, total, coins};
+}
+
+function store() {
+  state.tare = num(tareEl.value);
+  COINS.forEach(c => {
+    state.w[c.id] = document.getElementById("w-" + c.id).value;
+    state.g[c.id] = num(document.getElementById("g-" + c.id).value) || c.g;
+  });
+  save();
+}
+
+document.addEventListener("input", e => { if (e.target.tagName === "INPUT") { calc(); store(); } });
+
+const msg = t => { const m = document.getElementById("msg"); m.textContent = t; setTimeout(() => { if (m.textContent === t) m.textContent = ""; }, 2500); };
+
+document.getElementById("copy").addEventListener("click", async () => {
+  const {parts, total, coins} = calc();
+  const d = new Date().toLocaleDateString("en-PH");
+  const lines = parts.filter(p => p.n).map(p => `${p.c.name}: ${p.n} coins = ${peso(p.v)}`);
+  const text = `Coin count ${d}\n${lines.join("\n")}\nTotal: ${coins} coins = ${peso(total)}`;
+  try { await navigator.clipboard.writeText(text); msg("Summary copied"); } catch (e) { msg("Copy was blocked here; select the numbers above instead"); }
+});
+document.getElementById("clear").addEventListener("click", () => {
+  COINS.forEach(c => document.getElementById("w-" + c.id).value = ""); calc(); store(); msg("Weights cleared");
+});
+document.getElementById("reset").addEventListener("click", () => {
+  COINS.forEach(c => document.getElementById("g-" + c.id).value = c.g); calc(); store(); msg("Coin weights back to official specs");
+});
+
+calc();
+}
+</script>
+</body>
+</html>
