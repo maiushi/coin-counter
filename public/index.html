@@ -37,7 +37,7 @@ th:first-child,td:first-child{text-align:left;white-space:normal}
 th{font-size:13px;color:var(--mute);font-weight:600}
 td.coin b{display:block}td.coin em{font-style:normal;color:var(--mute);font-size:13px}
 .dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px}
-td input{width:6.5em}td input.tare-in{width:8em}
+td input{width:6.5em}td input.tare-in{width:4.2em;padding:6px 8px;border-radius:8px;color:var(--mute)}td input.tare-in::placeholder{color:var(--mute);opacity:.7}
 .num{font-weight:800;font-variant-numeric:tabular-nums}
 .btns{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
 button{font:inherit;font-weight:600;min-height:44px;padding:0 18px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
@@ -132,7 +132,7 @@ function calc() {
   let total = 0, coins = 0; const parts = [];
   COINS.forEach(c => {
     const tEl = document.getElementById("t-" + c.id);
-    tEl.placeholder = def + " (default)";
+    tEl.placeholder = String(def);
     const tare = tEl.value.trim() === "" ? def : num(tEl.value);
     const raw = document.getElementById("w-" + c.id).value;
     const w = raw === "" ? 0 : Math.max(0, num(raw) - tare);
