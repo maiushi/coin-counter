@@ -37,7 +37,7 @@ th:first-child,td:first-child{text-align:left;white-space:normal}
 th{font-size:13px;color:var(--mute);font-weight:600}
 td.coin b{display:block}td.coin em{font-style:normal;color:var(--mute);font-size:13px}
 .dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px}
-td input{width:6.5em}
+td input{width:6.5em}td input.tare-in{width:8em}
 .num{font-weight:800;font-variant-numeric:tabular-nums}
 .btns{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
 button{font:inherit;font-weight:600;min-height:44px;padding:0 18px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
@@ -64,12 +64,12 @@ summary{font-weight:600;cursor:pointer;min-height:28px}
   </section>
 
   <div class="tare">
-    <label for="tare">Container weight</label>
-    <input id="tare" inputmode="decimal" value="0"> <span>g, subtracted from every row</span>
+    <label for="tare">Default container weight</label>
+    <input id="tare" inputmode="decimal" value="0"> <span>g, used for any row whose own Container box is empty</span>
   </div>
 
   <table class="stack" id="slip">
-    <thead><tr><th>Coin</th><th>Weighed (g)</th><th>Grams per coin</th><th>Coins</th><th>Value</th></tr></thead>
+    <thead><tr><th>Coin</th><th>Weighed (g)</th><th>Container (g)</th><th>Grams per coin</th><th>Coins</th><th>Value</th></tr></thead>
     <tbody id="rows"></tbody>
   </table>
 
@@ -80,6 +80,7 @@ summary{font-weight:600;cursor:pointer;min-height:28px}
   </div>
   <div id="msg"></div>
 
+  <p class="note">Weighing coins inside their tray? Weigh each empty tray once and type it into that row's Container box; the page remembers it. Rows with an empty Container box use the default at the top (set it to 0 if you press TARE on the scale).</p>
   <p class="note">Counts are about ±1%, because worn coins weigh a little less. For a closer count, calibrate: weigh 20 of your own coins of one kind, divide by 20, and type that into "Grams per coin". The page remembers your numbers on this device.</p>
 
   <details>
@@ -101,8 +102,8 @@ const COINS = [
 ];
 const DEFAULT_G = Object.fromEntries(COINS.map(c => [c.id, c.g]));
 const KEY = "coin-count-v1";
-let state = {tare: 0, w: {}, g: {...DEFAULT_G}};
-try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) state = {tare: s.tare || 0, w: s.w || {}, g: {...DEFAULT_G, ...(s.g || {})}}; } catch (e) {}
+let state = {tare: 0, w: {}, t: {}, g: {...DEFAULT_G}};
+try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) state = {tare: s.tare || 0, w: s.w || {}, t: s.t || {}, g: {...DEFAULT_G, ...(s.g || {})}}; } catch (e) {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
 const peso = n => "₱" + Math.round(n).toLocaleString("en-PH");
 const num = s => { const x = parseFloat(String(s).replace(/,/g, "")); return isFinite(x) ? x : 0; };
@@ -112,6 +113,7 @@ rows.innerHTML = COINS.map(c => `
   <tr>
     <td class="coin"><span class="dot" style="background:${c.c}"></span><b style="display:inline">${c.name}</b><em style="display:block;margin-left:20px">${c.note}</em></td>
     <td><input id="w-${c.id}" inputmode="decimal" placeholder="0" aria-label="${c.name} weighed grams"></td>
+    <td><input id="t-${c.id}" class="tare-in" inputmode="decimal" aria-label="${c.name} container grams"></td>
     <td><input id="g-${c.id}" inputmode="decimal" aria-label="${c.name} grams per coin"></td>
     <td class="num" id="n-${c.id}">0</td>
     <td class="num" id="v-${c.id}">₱0</td>
@@ -121,13 +123,17 @@ const tareEl = document.getElementById("tare");
 tareEl.value = state.tare || 0;
 COINS.forEach(c => {
   document.getElementById("w-" + c.id).value = state.w[c.id] ?? "";
+  document.getElementById("t-" + c.id).value = state.t[c.id] ?? "";
   document.getElementById("g-" + c.id).value = state.g[c.id];
 });
 
 function calc() {
-  const tare = num(tareEl.value);
+  const def = num(tareEl.value);
   let total = 0, coins = 0; const parts = [];
   COINS.forEach(c => {
+    const tEl = document.getElementById("t-" + c.id);
+    tEl.placeholder = def + " (default)";
+    const tare = tEl.value.trim() === "" ? def : num(tEl.value);
     const raw = document.getElementById("w-" + c.id).value;
     const w = raw === "" ? 0 : Math.max(0, num(raw) - tare);
     const g = num(document.getElementById("g-" + c.id).value) || c.g;
@@ -151,6 +157,7 @@ function store() {
   state.tare = num(tareEl.value);
   COINS.forEach(c => {
     state.w[c.id] = document.getElementById("w-" + c.id).value;
+    state.t[c.id] = document.getElementById("t-" + c.id).value;
     state.g[c.id] = num(document.getElementById("g-" + c.id).value) || c.g;
   });
   save();
